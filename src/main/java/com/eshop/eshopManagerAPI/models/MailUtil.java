@@ -48,7 +48,24 @@ public class MailUtil {
 			message.setSubject("CS 308 Test");
 			// we can use setText method to send raw mail instead of using htmlCode and setContent method
             message.setText("Hello," + "\n\n No spam to my email, please!");
+			//
+            
+           	 	MimeBodyPart messageBodyPart = new MimeBodyPart();
+            		Multipart multipart = new MimeMultipart();
+            
+           		 //attached 1 --------------------------------------------
+            		String file = "C:\\Users\\poyraz\\Desktop\\cs308text\\file.pdf";
+            		String fileName = "file.pdf";
+            		messageBodyPart = new MimeBodyPart();   
+            		DataSource source = new FileDataSource(file);      
+            		messageBodyPart.setDataHandler(new DataHandler(source));
+            		messageBodyPart.setFileName(fileName);
+            		multipart.addBodyPart(messageBodyPart);
+        		//------------------------------------------------------   
+            		message.setContent(multipart);
 			
+			
+		
             return message;
 		} 
         
