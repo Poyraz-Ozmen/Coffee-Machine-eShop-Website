@@ -294,6 +294,15 @@ public class TestController {
 		MailUtil.sendMail(recepient);
 		
     }
+	
+	@PostMapping("/createPDF/{dummy}")
+    public void createPDF(@PathVariable("dummy") String dummy) throws Exception
+	
+    {
+		
+		CreatePDF.createPDF(dummy);
+		
+    }
     
 
 }
