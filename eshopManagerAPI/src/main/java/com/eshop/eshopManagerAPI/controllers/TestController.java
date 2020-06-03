@@ -9,6 +9,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.validation.Valid;
@@ -29,10 +32,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.eshop.eshopManagerAPI.models.Coupon;
 import com.eshop.eshopManagerAPI.models.CreatePDF;
 import com.eshop.eshopManagerAPI.models.DateUtil;
 import com.eshop.eshopManagerAPI.models.MailUtil;
 import com.eshop.eshopManagerAPI.models.ProductCategories;
+import com.eshop.eshopManagerAPI.models.ProductRating;
+import com.eshop.eshopManagerAPI.models.Rating;
 import com.eshop.eshopManagerAPI.models.Review;
 import com.eshop.eshopManagerAPI.models.User;
 import com.eshop.eshopManagerAPI.models.UserSelectsProduct;
@@ -45,6 +51,9 @@ import com.eshop.eshopManagerAPI.payload.response.MessageResponse;
 import com.eshop.eshopManagerAPI.repository.categoryRepository;
 import com.eshop.eshopManagerAPI.repository.checkedOutItemsRepository;
 import com.eshop.eshopManagerAPI.repository.productRepository;
+import com.eshop.eshopManagerAPI.repository.CouponRepository;
+import com.eshop.eshopManagerAPI.repository.ProductRatingRepository;
+import com.eshop.eshopManagerAPI.repository.RatingRepository;
 import com.eshop.eshopManagerAPI.repository.UserRepository;
 import com.eshop.eshopManagerAPI.repository.userSelectsProductRepository;
 import com.eshop.eshopManagerAPI.repository.productCategoriesRepository;
@@ -86,7 +95,15 @@ public class TestController {
 
 	@Autowired 
 	reviewRepository reviewRepository;
-
+	
+	@Autowired 
+	CouponRepository CouponRepository;
+	
+	@Autowired 
+	RatingRepository RatingRepository;
+	
+	@Autowired
+	ProductRatingRepository ProductRatingRepository;
 	
 	@GetMapping("/all")
 	public String allAccess() {
@@ -246,7 +263,7 @@ public class TestController {
 				User user1 = UserRepository.findByid(userId);
 					
 				UserSelectsProduct selectedProduct = new UserSelectsProduct(product1, user1, localDate, quantity);	
-	
+				selectedProduct.setSelectProductPrice(product1.getDiscountedPrice());// poyraz manual set price
 				selectedProduct = userSelectsProductRepository.saveAndFlush(selectedProduct);
 				return "";
 			}
@@ -322,50 +339,7 @@ public class TestController {
     }
 	
 
-	/*
-	@GetMapping("/finalizeCheckout/{userId}")
-    public String finalizeCheckout(@PathVariable("userId") String userIds)
-   {
 
-       long userId = Long.parseLong(userIds);
-       
-       List<UserSelectsProduct> qResult = userSelectsProductRepository.findByuserId(userId);
-       for(UserSelectsProduct currentRow: qResult) {
-    	   
-    	   if(currentRow.getProduct().getQuantityStocks() >= currentRow.getQuantity()) {
-    	   
-		    	   checkedOutItems checkedOutItem = new checkedOutItems( currentRow.getProduct(),
-			    			   											currentRow.getUser(),
-			    			   											currentRow.getOrderDate(),
-			    			   											currentRow.getQuantity());    	   
-		    	   
-		    	   userSelectsProductRepository.deleteByuserIdAndProductId(userId, currentRow.getProduct().getID());
-		    	   
-		    	   checkedOutItemsRepository.saveAndFlush(checkedOutItem);
-		    	   
-		    	   //STOCK
-		    	   
-		    	   product currentProduct = currentRow.getProduct();
-		    	   
-		    	   int currentStocks = currentProduct.getQuantityStocks();
-		    	   
-		    	   currentProduct.setQuantityStocks(currentStocks - currentRow.getQuantity());
-		    	   
-		    	   productRepository.saveAndFlush(currentProduct);
-		    	   
-		    	   return "200";
-	    	   
-    	   }   
-    	   else {
-    		   	String currentStocks = Integer.toString(currentRow.getProduct().getQuantityStocks());
-    		   	String currentItemName = currentRow.getProduct().getName();
-    		   return "The amount of " + currentItemName+ "in your cart cannot exceed the amount of item in Stocks (" + currentStocks + ").";
-    	   		
-    	   }
-       }
-	return "180";
-   }
-*/
 	
 	@GetMapping("/finalizeCheckout/{userId}")
     public String finalizeCheckout(@PathVariable("userId") String userIds) throws Exception
@@ -391,16 +365,84 @@ public class TestController {
     	   
     	   
        }
-          
+       
+       
+       
+       /////////Invoice Oluştur, mail gönder
+	  /////////Invoice Oluştur, mail gönder
+	 /////////Invoice Oluştur, mail gönder
+    /////////Invoice Oluştur, mail gönder
+       // before deleting items from userSelectsProduct
+       int total = 0;
+       
+       String Message = "Thank you for your purchase \n\n" + "Your purchase includes: " + "\n\n";
+       
+       for(UserSelectsProduct Item: qResult)
+       {
+           
+    	   
+    	   
+           int total_price_of_one_product = Item.getSelectProductPrice() * (Item.getQuantity());
+           
+           total += total_price_of_one_product;
+           
+           // discount varsa da aynısı
+           if(Item.isCouponApplied()==true) 
+           {      	   
+        	   if(Item.getProduct().isDiscounted()==true) 
+        	   {
+        		   Message = Message  + " " +"Product Name: " + (Item.getProduct().getName()) + " " +" - Quantity: " + Item.getQuantity() 
+	               +" - Product price: "+Item.getSelectProductPrice() + " \n-Your coupon has been applied to this item original price was :" + Item.getProduct().getPrice() 
+	               + "\n-Discounted price was :" +Item.getProduct().getDiscountedPrice()
+	               + " \n- total price: "+total_price_of_one_product +"\n\n\n" ;
+        	   }
+        	   else 
+        	   {
+	        	   Message = Message  + " " +"Product Name: " + (Item.getProduct().getName()) + " " +" - Quantity: " + Item.getQuantity() 
+	               +" - Product price: "+Item.getSelectProductPrice() + " \n-Your coupon has been applied to this item original price was :" + Item.getProduct().getPrice() 
+	               + " \n- total price: "+total_price_of_one_product +"\n\n\n" ;
+        	   }
+        	   
+           }
+           else 
+           {
+        	   if(Item.getProduct().isDiscounted()==true) 
+        	   {
+        		   Message = Message  + " " +"Product Name: " + (Item.getProduct().getName()) + " " +" - Quantity: " + Item.getQuantity() 
+	               +" - Product price: "+Item.getSelectProductPrice() + "original price was : " +Item.getProduct().getPrice() 
+	               + "\nDiscounted price was :" +Item.getProduct().getDiscountedPrice()
+	               + " \n- total price: "+total_price_of_one_product +"\n\n\n" ;
+        	   }
+        	   
+        	   else {
+		           Message = Message + " " +"Product Name: " + (Item.getProduct().getName()) + " " +" - Quantity: " + Item.getQuantity() 
+		           +" - Product price: "+Item.getProduct().getPrice()
+		           + " \n- total price: "+total_price_of_one_product +"\n\n" ;
+        	   }
+           }
+       }
+       Message = Message + "\n" +"Total price: " + total;
+       CreatePDF.createInvoicePDF(Message);
+       User user = UserRepository.findByid(userId);
+       MailUtil.sendInvoiceMail(user.getEmail());
+       
+       /////////Invoice Oluştur, mail gönder
+	  /////////Invoice Oluştur, mail gönder
+	 /////////Invoice Oluştur, mail gönder
+    /////////Invoice Oluştur, mail gönder
+       
+
        for(UserSelectsProduct currentRow: qResult) {
     	   
     	   // We don't need any if condition because we checked it above.
     	   //if(currentRow.getProduct().getQuantityStocks() >= currentRow.getQuantity()) 
     	   
-		    	   checkedOutItems checkedOutItem = new checkedOutItems( currentRow.getProduct(),
+		    	   checkedOutItems checkedOutItem = new checkedOutItems(
+		    			   												currentRow.getProduct(),
 			    			   											currentRow.getUser(),
 			    			   											currentRow.getOrderDate(),
-			    			   											currentRow.getQuantity());    	   
+			    			   											currentRow.getQuantity()
+			    			   											);    	   
 		    	   
 		    	   userSelectsProductRepository.deleteByuserIdAndProductId(userId, currentRow.getProduct().getID());
 		    	   
@@ -417,79 +459,13 @@ public class TestController {
 		    	   productRepository.saveAndFlush(currentProduct);
 		   
     	   // There won't be any else because we checked it above
-    	   //else {}
-		    	   
-		    	   
+    	   //else {}	    	   
        }
-       
-       // if below repository line written in CreatePDF class it could not find anything so it returns NULL.
-       List<checkedOutItems> Invoice = checkedOutItemsRepository.findByuserId(userId); 
-
-       int total = 0;
-       
-       String Message = "Thank you for your purchase \n\n" + "Your purchase includes: " + "\n";
-
-       for(checkedOutItems Item: Invoice)
-       {
-           //System.out.println(Item.getUser().getFullname()); // for debugging
-
-           int total_price_of_one_product = Item.getProduct().getPrice() * (Item.getQuantity());
-           total += total_price_of_one_product;
-
-           Message = Message + " " +"Product Name: " + (Item.getProduct().getName()) + " " +" - Quantity: " + Item.getQuantity() 
-           +" - Product price: "+Item.getProduct().getPrice()
-           + " - total price: "+total_price_of_one_product +"\n\n" ;
-
-
-       }
-       Message = Message + "\n" +"Total price: " + total;
-
-       CreatePDF.createInvoicePDF(Message);
-       User user = UserRepository.findByid(userId);
-       MailUtil.sendInvoiceMail(user.getEmail());
-	   
-       
-       
+              
        return "180";
      
    }
-	/*
-	@GetMapping("/discountItem/{productId}/{discountPercentage}")
-    public String discountItem(@PathVariable("productId") String productIds, 
-    						 @PathVariable("discountPercentage") String discountPercentages)
-   {
-			if(Integer.parseInt(discountPercentages) < 101 && Integer.parseInt(discountPercentages) > 0) {
-		       
-				product product1 = productRepository.findByid(Long.parseLong(productIds));
-		       
-				int discountedPrice = product1.getPrice() - ((product1.getPrice() * Integer.parseInt(discountPercentages)) / 100);
-		
-				product1.setDiscountedPrice(discountedPrice);
-				
-				product1.setDiscounted(true);
-				
-				productRepository.saveAndFlush(product1);
-		       
-				
-				//SEND MAIL HERE 
-				//productID
-				
-		       return "The item " + product1.getName() + " is discounted by " + discountPercentages 
-		    		   + "% and is now priced at " + product1.getDiscountedPrice() + " dollars.";
-			}
-			
-			else if(Integer.parseInt(discountPercentages) >= 101) {
-			    return "The item " + productRepository.findByid(Long.parseLong(productIds)).getName() 
-			    		+ " cannot be discounted by " + discountPercentages + "%. The maximum discount amount is 100%";			
-			}
-			
-			else if(Integer.parseInt(discountPercentages) < 1) {
-	
-				  return "The item " + productRepository.findByid(Long.parseLong(productIds)).getName() 
-				    		+ " cannot be discounted by " + discountPercentages + "%. The minimum discount amount is 1%";			
-	   }
-			return "180";
-   }*/
+
 	
 	@GetMapping("/discountItem/{productId}/{discountPercentage}")
     public String discountItem(@PathVariable("productId") String productIds, 
@@ -658,6 +634,13 @@ public class TestController {
 		myProduct.setDiscounted(false);
 		myProduct.setDiscountedPrice(priceNew);
 		productRepository.save(myProduct);//Save to Database
+		
+		
+		ProductRating pr = new ProductRating(myProduct);
+		pr.setAverageRating(0); // 0 rating means no rating
+		pr.setCounter(0);
+		ProductRatingRepository.saveAndFlush(pr);
+		
     }
 	
 	@PostMapping("/deleteProductById/{id}")//Product Manager deletes a row from product table using id
@@ -740,7 +723,9 @@ public class TestController {
 
         return new ResponseEntity<List<checkedOutItems>>(checkedlist, HttpStatus.OK);
     }	
-
+    
+    /* 
+    // we dont use this one, poyraz
     @PostMapping("/createInvoice_PDF/{userId}/{paymentDate}")
     public void createInvoice_PDF(@PathVariable("userId") long userId, 
             @PathVariable("paymentDate") String paymentDate) throws FileNotFoundException, DocumentException
@@ -774,10 +759,12 @@ public class TestController {
         for(checkedOutItems Item: Invoice)
         {
             //System.out.println(Item.getUser().getFullname()); // for debugging
-
+        	
             int total_price_of_one_product = Item.getProduct().getPrice() * (Item.getQuantity());
             total += total_price_of_one_product;
-
+            
+            
+            
             Message = Message + " " +"Product Name: " + (Item.getProduct().getName()) + " " +" - Quantity: " + Item.getQuantity() 
             +" - Product price: "+Item.getProduct().getPrice()
             + " - total price: "+total_price_of_one_product +"\n\n" ;
@@ -789,7 +776,7 @@ public class TestController {
         CreatePDF.createInvoicePDF(Message);
 
     }
-    
+    */
     
     //REVIEW
     //REVIEW
@@ -900,6 +887,199 @@ public class TestController {
     }
 
     //Delivery
+    
+    // tüm userlara gönderilecek
+    // gives spesific user a coupon
+    // and sends that coupon to user's email
+    
+    
+    @PostMapping("/addCoupon/{coupon_string}/{dicount_ratio}/{productId}/{userIds}")
+    public void addCoupon(@PathVariable("coupon_string") String coupon_string,@PathVariable("dicount_ratio") int dicount_ratio,
+    		 @PathVariable("productId") String productId, @PathVariable("userIds") String userIds) 
+    
+    {   	
+    
+    	if( 0 < dicount_ratio && dicount_ratio < 100) {
+    		
+    		long product_id = Long.parseLong(productId);
+    		Coupon c = new Coupon(coupon_string);
+        	c.setDiscount(dicount_ratio);
+        	c.setProduct_id(product_id);
+        	
+        	CouponRepository.saveAndFlush(c);; // Save to Database
+    		
+        	product p = productRepository.findByid(Long.parseLong(productId));
+        	
+        	
+        	
+        	User u = UserRepository.findByid(Long.parseLong(userIds));
+        	try {
+				MailUtil.sendDiscountMail(u.getEmail(),"\n You can use this coupon code in your cart to apply to this item : "+ p.getName()+"\n couponString: "  + coupon_string);
+			} catch (Exception e) {
+				System.out.println("User does not have mail");
+				e.printStackTrace();
+			}
+        	
+        	
+        	
+        	
+        	//List<User> userList = UserRepository.findAll(); // gets all the users in a list
+        	
+
+        	/*
+	        for(User User: userList)
+	        {
+	            // If user has an email then send discount message.
+	            if(User.getEmail()!=null) 
+	            {
+	                try {
+	                	
+						
+	                	MailUtil.sendDiscountMail(User.getEmail(),"\n You can use this coupon code in your cart to apply discount: "+ coupon_string);
+					} 
+	                
+	                catch (Exception e) {
+						
+						System.out.println("user does not have  email");
+						e.printStackTrace();
+					
+					}
+	            }
+
+	        }
+	        */
+        	
+
+    	
+    	}
+    	
+    	else {	System.out.println("discount ratio must be between 0 and 100");	}
+    	
+    }
+    
+    @PostMapping("/testApplyCoupon/{coupon_string}")
+    public String applyCoupon(@PathVariable("coupon_string") String coupon_string)
+    {
+    	
+       	
+    	Boolean exists = CouponRepository.existsBycoupon(coupon_string);
+    	// if this coupon does not exist (NULL) then return coupon is not valid.
+		if(exists == false) 
+		{
+			return "Coupon does not exist."; 
+			// invoice * 1 = invoice which means no discount.
+			// we can pop-up some kind of message says:
+			//"this coupon code does not exist"
+		}
+        
+		//else it exists
+		Coupon c =  CouponRepository.findBycoupon(coupon_string);
+		
+		UserSelectsProduct row = userSelectsProductRepository.findByProductId(c.getProduct_id());
+    	row.setCouponApplied(true);
+    	// int discountedPrice = product1.getPrice() - ((product1.getPrice() * Integer.parseInt(discountPercentages)) / 100);
+    	//int discounted_price = (int) ( (100-c.getDiscount()) / 100 ) * row.getSelectProductPrice();
+    	int discounted_price =  row.getSelectProductPrice() - (row.getSelectProductPrice() * (c.getDiscount()) / 100);
+    	row.setSelectProductPrice(discounted_price);
+		
+		
+        return "Coupon applied.";
+    }
+    
+    
+    
+    @PostMapping("/createRating/{productIds}/{userIds}/{rating}")
+    public String createRating(@PathVariable("productIds") String productIds, 
+    		@PathVariable("userIds") String userIds, 
+    		@PathVariable("rating") long rating) 
+    {
+    	
+    	List<Rating> list_rating = RatingRepository.findByuserIdAndProductId(Long.parseLong(userIds), Long.parseLong(productIds));
+    	
+    	if(!list_rating.isEmpty()) {
+    		return "you already submitted a rating";
+    	}
+    	
+    	
+        product p = productRepository.findByid(Long.parseLong(productIds));
+        User u = UserRepository.findByid(Long.parseLong(userIds));
+		
+        ProductRating pr = ProductRatingRepository.findByproductId(p.getID());
+        
+        
+        
+		Rating r = new Rating(u,p,rating);
+		
+		int counter = pr.getCounter();
+		
+		pr.setAverageRating(	((pr.getAverageRating()*counter) + r.getRating())  /  (counter + 1)	   );
+		
+		
+		
+		pr.setCounter(counter + 1);
+		ProductRatingRepository.saveAndFlush(pr);
+		RatingRepository.saveAndFlush(r);
+		return "180";
+
+    }
+    
+    
+    @GetMapping("/getAllOrders/{userIds}")
+    public ResponseEntity<?> getAllOrders(@PathVariable("userIds") String userIds) 
+    {
+    	
+    	List<checkedOutItems> list_checkout = checkedOutItemsRepository.findByuserId(Long.parseLong(userIds));		
+        return new ResponseEntity<List<checkedOutItems>>(list_checkout, HttpStatus.OK);
+
+    }
+    
+    @GetMapping("/showRating/{productIds}")
+    public ResponseEntity<?> showRating(@PathVariable("productIds") String productIds) 
+    {
+
+        product p = productRepository.findByid(Long.parseLong(productIds));
+        
+		
+        ProductRating pr = ProductRatingRepository.findByproductId(p.getID());
+        
+        return new ResponseEntity<ProductRating>(pr, HttpStatus.OK);
+        
+    }
+    
+    @GetMapping("/showUsersRating/{userIds}/{productIds}")
+    public ResponseEntity<?> showUsersRating(@PathVariable("userIds") String userIds
+                                            ,@PathVariable("productIds") String productIds) 
+    {
+        Long userId = Long.parseLong(userIds);
+
+        Long productId = Long.parseLong(productIds);
+        
+        if(RatingRepository.existsByuserIdAndProductId(userId, productId)) {
+            List<Rating> rating = RatingRepository.findByuserIdAndProductId(userId, productId);
+
+             return new ResponseEntity<List<Rating>>(rating, HttpStatus.OK);
+        }
+
+        return null;
+    }
+    
+    @GetMapping("/fetchProductsRatingAsc")
+    public ResponseEntity<?> fetchProductsRatingAsc() 
+    {
+        List<ProductRating> pr = ProductRatingRepository.findAllByOrderByAverageRatingAsc();
+
+        return new ResponseEntity<List<ProductRating>>(pr, HttpStatus.OK);
+
+    }
+
+    @GetMapping("/fetchProductsRatingDsc")
+    public ResponseEntity<?> fetchProductsRatingDsc() 
+    {
+        List<ProductRating> pr = ProductRatingRepository.findAllByOrderByAverageRatingDesc();
+
+        return new ResponseEntity<List<ProductRating>>(pr, HttpStatus.OK);
+
+    }
 
 }
 

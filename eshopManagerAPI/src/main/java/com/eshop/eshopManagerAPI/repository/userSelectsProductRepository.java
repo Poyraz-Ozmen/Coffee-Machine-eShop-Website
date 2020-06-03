@@ -24,6 +24,8 @@ public interface userSelectsProductRepository extends JpaRepository<UserSelectsP
 	List<UserSelectsProduct> findByuserId(long userId);
 	
 	UserSelectsProduct findByUserIdAndProductId(Long searchString, Long descriptionSearch);
+	
+	UserSelectsProduct findByProductId(Long ProductId);
 		
 	List<UserSelectsProduct> deleteByuserIdAndProductId(long userId, long productId);
 

@@ -20,6 +20,12 @@ public class UserSelectsProduct {
 	    @ManyToOne(fetch = FetchType.LAZY)
 	    @JoinColumn(name="userId")
 	    private User user;
+	    
+	    
+	    private int SelectProductPrice; // poyraz
+	    
+	    private boolean couponApplied; // poyraz
+	    
 
 //	    private long userId;
 
@@ -79,5 +85,22 @@ public class UserSelectsProduct {
 
 		public void setUser(User user) {
 			this.user = user;
+		}
+
+
+		public int getSelectProductPrice() {
+			return SelectProductPrice;
+		}
+
+		public void setSelectProductPrice(int selectProductPrice) {
+			SelectProductPrice = selectProductPrice;
+		}
+
+		public boolean isCouponApplied() {
+			return couponApplied;
+		}
+
+		public void setCouponApplied(boolean couponApplied) {
+			this.couponApplied = couponApplied;
 		}
 }

@@ -27,5 +27,9 @@ public interface productRepository extends JpaRepository<product, Long> {
 	List<product> findBydescriptionOrNameContaining(String searchString, String descriptionSearch);
 
 	product findByid(long productId);
+	
+	List<product> findAllByOrderByNameAsc();
+
+    List<product> findAllByOrderByNameDesc();
 
 }
